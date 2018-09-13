@@ -15,7 +15,7 @@ if (IS_LOCAL_ENV === true) {
     define('DATABASE', [
         'DSN' => 'mysql:dbname=id7118233_slack_todo;host=localhost',
         'USER' => 'id7118233_rddeveloper7',
-        'PASS' => 'rddeveloper7_database'
+        'PASS' => ''
     ]);
 }
 define('MESSAGES', [

@@ -23,9 +23,10 @@ class Todo implements TodoInterface {
 
     public function marktodo(array $rqData) {
         $message = MESSAGES['TODO_NOT_FOUND'];
-        if (!empty($rqData['text'])) {
+        if (!empty($rqData['text']) && $rqData['channel_id']) {
+            $cId = $rqData['channel_id'];
             $todoId = $todoMrkdDone = 0;            
-            $todoId = $this->getTodoId($rqData['text']);
+            $todoId = $this->getTodoId($rqData['text'], $cId);
             if ($todoId > 0) {
                 $todoMrkdDone = $this->saveMarkTodo($todoId);
                 if ($todoMrkdDone > 0) {
@@ -47,13 +48,13 @@ class Todo implements TodoInterface {
             $stmt = $this->dbh->prepare("SELECT txt FROM todos WHERE channel_id='{$cId}' AND status='NEW'"); 
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $lineBrk = ', ';
+            $lineBrk = "\n";
             if (!empty($rows)) {
                 $messageArr = [];
-                $message = MESSAGES['TODO_LIST'];
-                array_walk($rows, function ($val) use(&$messageArr, $lineBrk) {
+                $message = MESSAGES['TODO_LIST'] . $lineBrk;
+                array_walk($rows, function ($val, $key) use(&$messageArr, $lineBrk) {
                     if (!empty($val['txt'])) {
-                        $messageArr[] = $val['txt'];
+                        $messageArr[] = ($key + 1) . '. ' . $val['txt'];
                     }
                 });
                 $message .= implode($lineBrk, $messageArr);
@@ -62,9 +63,9 @@ class Todo implements TodoInterface {
         $this->throwResponse($message);
     }
 
-    private function getTodoId(string $todo) : int {
-        $redordId = 0;
-        $stmt = $this->dbh->prepare("SELECT id FROM todos WHERE txt='{$todo}' AND status='NEW' LIMIT 1"); 
+    private function getTodoId(string $todo, string $cId) : int {
+        $recordId = 0;
+        $stmt = $this->dbh->prepare("SELECT id FROM todos WHERE txt='{$todo}' AND status='NEW' AND channel_id='$cId' LIMIT 1"); 
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!empty($row['id']) && $row['id'] > 0) {
@@ -95,10 +96,13 @@ class Todo implements TodoInterface {
     }
 
     private function throwResponse($data) {
+        header('Content-Type: application/json');
         if (is_array($data)) {
-            echo json_encode($data, true);
+            echo json_encode($data);
         } else {
-            echo $data;
+            $format['text'] = $data;
+            $format['mrkdwn'] = true;
+            echo json_encode($format);
         }
         exit;
     }
